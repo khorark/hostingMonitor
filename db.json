@@ -9,7 +9,7 @@
   },
   {
     "host": "test.host.number.3",
-    "status": 3
+    "status": 5
   },
   {
     "host": "test.host.number.4",
@@ -17,6 +17,6 @@
   },
   {
     "host": "test.host.number.5",
-    "status": 2
+    "status": 3
   }
 ]
