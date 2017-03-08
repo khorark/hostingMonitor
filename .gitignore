@@ -1,3 +1,8 @@
 Будет удалено .directory
 Будет удалено .idea/
 /daemon/__init__.py
+/.directory
+/conf/httpd/*
+/conf/nginx/*
+/templates/apache.template
+/templates/nginx.template
