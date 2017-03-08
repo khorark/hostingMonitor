@@ -1,0 +1,9 @@
+
+<VirtualHost 192.168.15.137:8080>
+    ServerName $HOSTNAME$
+    DocumentRoot /cloud/web/public/17.02
+    Alias /dav/ /cloud/web/dav/
+    CustomLog /cloud/logs/$HOSTNAME$/request.bytes bytes
+    CustomLog /cloud/logs/$HOSTNAME$/request.log combined
+    ErrorLog /cloud/logs/$HOSTNAME$/error.log
+</VirtualHost>

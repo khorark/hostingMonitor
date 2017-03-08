@@ -1,0 +1,22 @@
+[
+  {
+    "host": "test.host.number.1",
+    "status": 2
+  },
+  {
+    "host": "test.host.number.2",
+    "status": 3
+  },
+  {
+    "host": "test.host.number.3",
+    "status": 3
+  },
+  {
+    "host": "test.host.number.4",
+    "status": 3
+  },
+  {
+    "host": "test.host.number.5",
+    "status": 2
+  }
+]
