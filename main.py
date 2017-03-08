@@ -5,37 +5,59 @@
 #
 #  Copyright 2017 Khoroshikh Arkadiy
 # MIT Licence
+
 import json
 import os
+import time
 from datetime import datetime
-import mysql.connector
 from mysql.connector import Error
 
 from mysql_config import connect
+from daemon import runner
 
 
 class App:
     def __init__(self):
+        self.stdin_path = '/dev/null'
+        self.stdout_path = '/dev/tty'
+        self.stderr_path = '/dev/tty'
+        self.pidfile_path = '/tmp/foo.pid'
+        self.pidfile_timeout = 5
         self.pathDb = 'db.json'
-        self.setting = {
-            'nginx': {
-                'template': 'templateConfigs/nginx.template',
-                'config': 'confMy/nginx/'
-            },
-            'apache': {
-                'template': 'templateConfigs/apache.template',
-                'config': 'confMy/httpd/'
-            }
-        }
+        self.pathToWorkDir = os.getcwd()
+        self.pathSetting = '{}/settings.json'.format(os.getcwd())
+        self.setting = ''
+        self.time_update = ''
+        self.mysql_config = ''
+
+    def getConfig(self):
+        try:
+            file = json.load(open(self.pathSetting))
+            self.setting = file['servers']
+            self.time_update = file['time_update']
+            self.mysql_config = file['mysql_config']
+            return True
+        except FileNotFoundError:
+            self.logError(40)
+            return False
+        except TypeError:
+            self.logError(50)
+            return False
 
     def getData(self):
         try:
-            conn = connect()
+            conn = connect(self.mysql_config)
             cursor = conn.cursor(dictionary=True)
             cursor.execute('SELECT * FROM hosts WHERE STATUS != 2')
             data = cursor.fetchall()
-            for rec in data:
-                print(rec)
+            # Обработка полученных данных
+            for host in data:
+                if host['status'] == 1:
+                    self.createConfigs(host['host'])
+                elif host['status'] == 3:
+                    self.removeConfigs(host['host'])
+                elif host['status'] != 2:
+                    self.logError(30, host)
 
         except Error as e:
             print('Error:', e)
@@ -57,23 +79,26 @@ class App:
     # Создание конфигов
     def createConfigs(self, host):
         for setting in self.setting.values():
-            text = open(setting['template']).read()
-            text = text.replace('$HOSTNAME$', host)
-            file = open('{}{}.conf'.format(setting['config'], host), 'w')
-            file.write(text)
-            file.close()
+            try:
+                text = open('{}/{}'.format(self.pathToWorkDir, setting['template'])).read()
+                text = text.replace('$HOSTNAME$', host)
+                file = open('{}/{}{}.conf'.format(self.pathToWorkDir, setting['config'], host), 'w')
+                file.write(text)
+                file.close()
+            except FileNotFoundError:
+                self.logError(10, setting)
 
-    #Удаление конфигов
+    # Удаление конфигов
     def removeConfigs(self, host):
         for setting in self.setting.values():
             try:
-                os.remove('{}{}.conf'.format(setting['config'], host))
+                os.remove('{}/{}{}.conf'.format(self.pathToWorkDir, setting['config'], host))
             except FileNotFoundError:
                 self.logError(10, '{}.conf'.format(host))
             except Exception:
                 self.logError()
 
-    #Обработчик ошибок и запись в лог
+    # Обработчик ошибок и запись в лог
     def logError(self, code, data=False):
         if code == 10:
             text = 'Файл {} не был найден'.format(data)
@@ -81,10 +106,14 @@ class App:
             text = 'Ошибка открытия файла'
         elif code == 30:
             text = 'Неизвестный статус хоста {}'.format(data)
+        elif code == 40:
+            text = 'Файл конфигурации не найден'
+        elif code == 50:
+            text = 'Неизвестный формат файла'
         else:
             text = 'Неизвестная ошибка'
 
-        path = 'logs/{}.log'.format(datetime.now().date())
+        path = '{}/logs/{}.log'.format(self.pathToWorkDir, datetime.now().date())
         file = open(path, 'a')
         file.write("""
             -------------------------
@@ -93,29 +122,17 @@ class App:
 
         """.format(datetime.now(), text))
         file.close()
-        print('Посмотрите log ошибок')
+        # print('Ошибка обработана')
 
-    def connect22(self):
-        # Соединяемся c mysql базой данных
-        try:
-            conn = mysql.connector.connect(host='localhost',
-                           database='test',
-                           user='newuser',
-                           password='1440954')
-            if conn.is_connected():
-                print('Connected to MySQL database')
-            else:
-                print('connection failed.')
-
-            return conn
-
-        except Error as e:
-            print(e)
-
-        finally:
-            conn.close()
+    def run(self):
+        if not self.getConfig():
+            return False
+        while True:
+            self.getData()
+            time.sleep(int(self.time_update))
 
 
 if __name__ == '__main__':
     app = App()
-    app.getData()
+    daemon_runner = runner.DaemonRunner(app)
+    daemon_runner.do_action()

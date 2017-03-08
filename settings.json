@@ -1,0 +1,19 @@
+{
+  "time_update": 10,
+  "mysql_config": {
+    "host": "localhost",
+    "database": "test",
+    "user": "newuser",
+    "password": "1440954"
+  },
+  "servers": {
+    "nginx": {
+      "template": "templates/nginx.template",
+      "config": "conf/nginx/"
+    },
+    "apache": {
+      "template": "templates/apache.template",
+      "config": "conf/httpd/"
+    }
+  }
+}

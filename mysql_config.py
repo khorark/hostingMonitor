@@ -1,16 +1,20 @@
 import mysql.connector
 from mysql.connector import Error
 
+config = {
+    'host': 'localhost',
+    'database': 'test',
+    'user': 'newuser',
+    'password': '1440954'
+}
 
-def connect():
+def connect(config):
     # Соединяемся c mysql базой данных
     try:
-        conn = mysql.connector.connect(host='localhost',
-                       database='test',
-                       user='newuser',
-                       password='1440954')
+        conn = mysql.connector.connect(**config)
         if conn.is_connected():
-            print('Connected to MySQL database')
+            # print('Connected to MySQL database')
+            pass
         else:
             print('connection failed.')
 
@@ -20,4 +24,4 @@ def connect():
         print(e)
 
 if __name__ == '__main__':
-    connect()
+    connect(config)
