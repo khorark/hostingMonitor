@@ -38,10 +38,10 @@ class App:
             self.mysql_config = file['mysql_config']
             return True
         except FileNotFoundError:
-            self.logError(40)
+            self.logError(40, 'main')
             return False
         except TypeError:
-            self.logError(50)
+            self.logError(50, 'main')
             return False
 
     def getData(self):
@@ -82,11 +82,16 @@ class App:
             try:
                 text = open('{}/{}'.format(self.pathToWorkDir, setting['template'])).read()
                 text = text.replace('$HOSTNAME$', host)
-                file = open('{}/{}{}.conf'.format(self.pathToWorkDir, setting['config'], host), 'w')
+
+                # Проверяем существует ли путь до конфига
+                pathToConfig = '{}/{}'.format(self.pathToWorkDir, setting['config'])
+                if not os.path.isdir(pathToConfig):
+                    os.makedirs(pathToConfig, 0o755)
+                file = open('{}{}.conf'.format(pathToConfig, host), 'w')
                 file.write(text)
                 file.close()
             except FileNotFoundError:
-                self.logError(10, setting)
+                self.logError(10, host, '{}{}.conf'.format(pathToConfig, host))
 
     # Удаление конфигов
     def removeConfigs(self, host):
@@ -94,18 +99,18 @@ class App:
             try:
                 os.remove('{}/{}{}.conf'.format(self.pathToWorkDir, setting['config'], host))
             except FileNotFoundError:
-                self.logError(10, '{}.conf'.format(host))
+                self.logError(10, host, '{}.conf'.format(host))
             except Exception:
-                self.logError()
+                self.logError(99, host)
 
     # Обработчик ошибок и запись в лог
-    def logError(self, code, data=False):
+    def logError(self, code, domain, data = False):
         if code == 10:
             text = 'Файл {} не был найден'.format(data)
         elif code == 20:
             text = 'Ошибка открытия файла'
         elif code == 30:
-            text = 'Неизвестный статус хоста {}'.format(data)
+            text = 'Неизвестный статус хоста {}'.format(domain)
         elif code == 40:
             text = 'Файл конфигурации не найден'
         elif code == 50:
@@ -113,7 +118,12 @@ class App:
         else:
             text = 'Неизвестная ошибка'
 
-        path = '{}/logs/{}.log'.format(self.pathToWorkDir, datetime.now().date())
+        # Проверяем, существует ли директория
+        pathDir = '{}/logs/{}'.format(self.pathToWorkDir, domain)
+        if not os.path.isdir(pathDir):
+            os.makedirs(pathDir, 0o0755)
+
+        path = '{}/{}.log'.format(pathDir, datetime.now().date())
         file = open(path, 'a')
         file.write("""
             -------------------------

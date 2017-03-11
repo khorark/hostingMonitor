@@ -4,5 +4,4 @@
 /.directory
 /conf/httpd/*
 /conf/nginx/*
-/templates/apache.template
-/templates/nginx.template
+/logs/*

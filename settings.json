@@ -8,11 +8,11 @@
   },
   "servers": {
     "nginx": {
-      "template": "templates/nginx.template",
+      "template": "templates/nginx/nginx.template",
       "config": "conf/nginx/"
     },
     "apache": {
-      "template": "templates/apache.template",
+      "template": "templates/apache/apache.template",
       "config": "conf/httpd/"
     }
   }
