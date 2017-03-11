@@ -37,6 +37,8 @@ class App:
             self.servers = file['servers']
             self.settings = file['settings']
             self.mysql_config = file['mysql_config']
+            if not self.servers or not self.settings or not self.mysql_config:
+                return False
             return True
         except FileNotFoundError:
             self.logError(40, 'main')
@@ -46,19 +48,44 @@ class App:
             return False
 
     def getData(self):
+        self.getConfig()
         try:
             conn = connect(self.mysql_config)
             cursor = conn.cursor(dictionary=True)
-            cursor.execute('SELECT * FROM hosts WHERE STATUS != 2')
+            # Получем из таблицы actions все незавершенные действия и id доменов
+            cursor.execute('SELECT id, action, domain_id FROM actions WHERE completed = "0"')
             data = cursor.fetchall()
-            # Обработка полученных данных
+            # Идем по циклу id этих доменов и выбираем их имя из таблици domains
             for host in data:
-                if host['status'] == 1:
-                    self.createConfigs(host['host'])
-                elif host['status'] == 3:
-                    self.removeConfigs(host['host'])
-                elif host['status'] != 2:
-                    self.logError(30, host)
+                cursor.execute('SELECT domain FROM domains WHERE id = {}'.format(host['domain_id']))
+                domain = cursor.fetchone()
+                statusFinish = ''
+                # Производим физическое действие, в зависимости от action над доменом
+                if host['action'] == 'create':
+                    self.createConfigs(domain['domain'])
+                    statusFinish = 'working'
+                elif host['action'] == 'close':
+                    statusFinish = 'closed'
+                elif host['action'] == 'delete':
+                    self.removeConfigs(domain['domain'])
+                    statusFinish = 'deleted'
+                else:
+                    self.logError(60, domain['domain'], host['action'])
+
+                if statusFinish != '':
+                    dateTS = datetime.now()
+                    # Обновляем поле update_at и status в таблице domains
+                    query = 'UPDATE domains SET status = %s, updated_at = %s WHERE id = %s'
+                    data = (statusFinish, dateTS, host['domain_id'])
+                    cursor.execute(query, data)
+                    # Обновляем поле update_at и поле completed на 1 в таблице actions
+                    query = 'UPDATE actions SET completed = %s, updated_at = %s WHERE id = %s'
+                    data = ('1', dateTS, host['id'])
+                    cursor.execute(query, data)
+                    # Применяем изменения
+                    conn.commit()
+                else:
+                    self.logError(70, domain['domain'], host['action'])
 
         except Error as e:
             print('Error:', e)
@@ -110,7 +137,7 @@ class App:
                 self.logError(99, host)
 
     # Обработчик ошибок и запись в лог
-    def logError(self, code, domain, data = False):
+    def logError(self, code, domain, data=False):
         if code == 10:
             text = 'Файл {} не был найден'.format(data)
         elif code == 20:
@@ -121,6 +148,10 @@ class App:
             text = 'Файл конфигурации не найден'
         elif code == 50:
             text = 'Неизвестный формат файла'
+        elif code == 60:
+            text = 'Неизвестный action {}'.format(data)
+        elif code == 70:
+            text = 'Ошибка при обработке action'
         else:
             text = 'Неизвестная ошибка'
 

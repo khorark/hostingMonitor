@@ -1,6 +1,6 @@
 {
   "settings": {
-    "time_update": 10,
+    "time_update": 20,
     "ip_address_server": "192.168.15.137",
     "path_to_files_server": "/cloud",
     "version": "17.02"
