@@ -88,7 +88,7 @@ class App:
                     self.logError(70, domain['domain'], host['action'])
 
             # Если были изменения, перезагружаем apache и nginx сервера
-            if not data:
+            if data:
                 subprocess.call('httpd reload', shell=True)
                 subprocess.call('nginx -s reload', shell=True)
 
