@@ -24,7 +24,6 @@ class App:
         self.stderr_path = '/dev/tty'
         self.pidfile_path = '/tmp/foo.pid'
         self.pidfile_timeout = 5
-        self.pathDb = 'db.json'
         self.pathToWorkDir = os.getcwd()
         self.pathSetting = '{}/settings.json'.format(os.getcwd())
         self.settings = ''
@@ -100,16 +99,6 @@ class App:
         finally:
             cursor.close()
             conn.close()
-
-    def readJsonFile(self):
-        data = json.load(open(self.pathDb))
-        for host in data:
-            if host['status'] == 1:
-                self.createConfigs(host['host'])
-            elif host['status'] == 3:
-                self.removeConfigs(host['host'])
-            elif host['status'] != 2:
-                self.logError(30, host)
 
     # Создание конфигов
     def createConfigs(self, host):
