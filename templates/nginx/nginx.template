@@ -1,22 +1,22 @@
 
 server {
-    listen      192.168.15.137:80;
+    listen      $IP_ADDRESS_SERVER$:80;
     server_name $HOSTNAME$;
-    error_log  /cloud/logs/$HOSTNAME$/error.log error;
+    error_log  $PATH_TO_FILES_SERVER$/logs/$HOSTNAME$/error.log error;
 
     location / {
-        proxy_pass      http://192.168.15.137:8080;
+        proxy_pass      http://$IP_ADDRESS_SERVER$:8080;
         location ~* ^.+\.(jpg|jpeg|gif|png|ico|svg|css|zip|tgz|gz|rar|bz2|doc|xls|exe|pdf|ppt|txt|odt|ods|odp|odf|tar|wav|bmp|rtf|js|mp3|avi|mpeg|flv|html|htm)$ {
-            root           /cloud/web/pubic/17.02;
-            access_log     /cloud/logs/$HOSTNAME$/request.log combined;
-            access_log     /cloud/logs/$HOSTNAME$/request.log bytes;
+            root           $PATH_TO_FILES_SERVER$/web/pubic/$VERSION$;
+            access_log     $PATH_TO_FILES_SERVER$/logs/$HOSTNAME$/request.log combined;
+            access_log     $PATH_TO_FILES_SERVER$/logs/$HOSTNAME$/request.log bytes;
             expires        max;
             try_files      $uri @fallback;
         }
     }
 
     location @fallback {
-        proxy_pass      http://192.168.15.137:8080;
+        proxy_pass      http://$IP_ADDRESS_SERVER$:8080;
     }
 
     location ~ /\.ht    {return 404;}

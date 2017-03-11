@@ -1,5 +1,10 @@
 {
-  "time_update": 10,
+  "settings": {
+    "time_update": 10,
+    "ip_address_server": "192.168.15.137",
+    "path_to_files_server": "/cloud",
+    "version": "17.02"
+  },
   "mysql_config": {
     "host": "localhost",
     "database": "test",

@@ -26,15 +26,16 @@ class App:
         self.pathDb = 'db.json'
         self.pathToWorkDir = os.getcwd()
         self.pathSetting = '{}/settings.json'.format(os.getcwd())
-        self.setting = ''
+        self.settings = ''
+        self.servers = ''
         self.time_update = ''
         self.mysql_config = ''
 
     def getConfig(self):
         try:
             file = json.load(open(self.pathSetting))
-            self.setting = file['servers']
-            self.time_update = file['time_update']
+            self.servers = file['servers']
+            self.settings = file['settings']
             self.mysql_config = file['mysql_config']
             return True
         except FileNotFoundError:
@@ -78,10 +79,15 @@ class App:
 
     # Создание конфигов
     def createConfigs(self, host):
-        for setting in self.setting.values():
+        for setting in self.servers.values():
             try:
                 text = open('{}/{}'.format(self.pathToWorkDir, setting['template'])).read()
+
+                # Подставляем данные конфигурации в шаблон
                 text = text.replace('$HOSTNAME$', host)
+                text = text.replace('$IP_ADDRESS_SERVER$', self.settings['ip_address_server'])
+                text = text.replace('$PATH_TO_FILES_SERVER$', self.settings['path_to_files_server'])
+                text = text.replace('$VERSION$', self.settings['version'])
 
                 # Проверяем существует ли путь до конфига
                 pathToConfig = '{}/{}'.format(self.pathToWorkDir, setting['config'])
@@ -95,7 +101,7 @@ class App:
 
     # Удаление конфигов
     def removeConfigs(self, host):
-        for setting in self.setting.values():
+        for setting in self.servers.values():
             try:
                 os.remove('{}/{}{}.conf'.format(self.pathToWorkDir, setting['config'], host))
             except FileNotFoundError:
@@ -139,7 +145,7 @@ class App:
             return False
         while True:
             self.getData()
-            time.sleep(int(self.time_update))
+            time.sleep(int(self.settings['time_update']))
 
 
 if __name__ == '__main__':

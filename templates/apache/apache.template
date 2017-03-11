@@ -1,9 +1,10 @@
 
-<VirtualHost 192.168.15.137:8080>
+<VirtualHost $IP_ADDRESS_SERVER$:8080>
     ServerName $HOSTNAME$
-    DocumentRoot /cloud/web/public/17.02
-    Alias /dav/ /cloud/web/dav/
-    CustomLog /cloud/logs/$HOSTNAME$/request.bytes bytes
-    CustomLog /cloud/logs/$HOSTNAME$/request.log combined
-    ErrorLog /cloud/logs/$HOSTNAME$/error.log
+    DocumentRoot $PATH_TO_FILES_SERVER$/web/public/$VERSION$
+    Alias /dav/ $PATH_TO_FILES_SERVER$/web/dav/
+    Alias /upload/ $PATH_TO_FILES_SERVER$/web/dav/
+    CustomLog $PATH_TO_FILES_SERVER$/logs/$HOSTNAME$/request.bytes bytes
+    CustomLog $PATH_TO_FILES_SERVER$/logs/$HOSTNAME$/request.log combined
+    ErrorLog $PATH_TO_FILES_SERVER$/logs/$HOSTNAME$/error.log
 </VirtualHost>
