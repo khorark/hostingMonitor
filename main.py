@@ -55,7 +55,6 @@ class App:
             # Получем из таблицы actions все незавершенные действия и id доменов
             cursor.execute('SELECT id, action, domain_id FROM actions WHERE completed = "0"')
             data = cursor.fetchall()
-            print(data)
             # Идем по циклу id этих доменов и выбираем их имя из таблици domains
             for host in data:
                 cursor.execute('SELECT domain FROM domains WHERE id = {}'.format(host['domain_id']))
@@ -89,9 +88,9 @@ class App:
                     self.logError(70, domain['domain'], host['action'])
 
             # Если были изменения, перезагружаем apache и nginx сервера
-            if data:
+            if not data:
                 subprocess.call('httpd reload', shell=True)
-                subprocess.call('nginx -s reload)', shell=True)
+                subprocess.call('nginx -s reload', shell=True)
 
         except Error as e:
             print('Error:', e)
