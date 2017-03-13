@@ -89,8 +89,8 @@ class App:
 
             # Если были изменения, перезагружаем apache и nginx сервера
             if data:
-                subprocess.call('httpd reload', shell=True)
-                subprocess.call('nginx -s reload', shell=True)
+                subprocess.call('service httpd reload', shell=True)
+                subprocess.call('service nginx -s reload', shell=True)
 
         except Error as e:
             print('Error:', e)
@@ -101,6 +101,11 @@ class App:
 
     # Создание конфигов
     def createConfigs(self, host):
+        # Создаем папку с логом
+        pathToLogs = '{}/logs/{}'.format(self.settings['path_to_files_server'], host)
+        if not os.path.isdir(pathToLogs):
+            os.makedirs(pathToLogs, 0o755)
+
         for setting in self.servers.values():
             try:
                 text = open('{}/{}'.format(self.pathToWorkDir, setting['template'])).read()
@@ -112,7 +117,7 @@ class App:
                 text = text.replace('$VERSION$', self.settings['version'])
 
                 # Проверяем существует ли путь до конфига
-                pathToConfig = '{}/{}'.format(self.pathToWorkDir, setting['config'])
+                pathToConfig = '{}'.format(setting['config'])
                 if not os.path.isdir(pathToConfig):
                     os.makedirs(pathToConfig, 0o755)
                 file = open('{}{}.conf'.format(pathToConfig, host), 'w')
@@ -125,7 +130,7 @@ class App:
     def removeConfigs(self, host):
         for setting in self.servers.values():
             try:
-                os.remove('{}/{}{}.conf'.format(self.pathToWorkDir, setting['config'], host))
+                os.remove('{}{}.conf'.format(setting['config'], host))
             except FileNotFoundError:
                 self.logError(10, host, '{}.conf'.format(host))
             except Exception:
