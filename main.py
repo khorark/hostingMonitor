@@ -12,6 +12,7 @@ import time
 import subprocess
 from datetime import datetime
 from mysql.connector import Error
+import shutil
 
 from mysql_config import connect
 from daemon import runner
@@ -27,17 +28,19 @@ class App:
         self.pathToWorkDir = os.getcwd()
         self.pathSetting = '{}/settings.json'.format(os.getcwd())
         self.settings = ''
-        self.servers = ''
+        self.templates = ''
+        self.configs = ''
         self.time_update = ''
         self.mysql_config = ''
 
     def getConfig(self):
         try:
             file = json.load(open(self.pathSetting))
-            self.servers = file['servers']
+            self.templates = file['templates']
             self.settings = file['settings']
             self.mysql_config = file['mysql_config']
-            if not self.servers or not self.settings or not self.mysql_config:
+            self.configs = file['configs']
+            if not self.templates or not self.settings or not self.mysql_config or not self.configs:
                 return False
             return True
         except FileNotFoundError:
@@ -62,9 +65,10 @@ class App:
                 statusFinish = ''
                 # Производим физическое действие, в зависимости от action над доменом
                 if host['action'] == 'create':
-                    self.createConfigs(domain['domain'])
+                    self.createConfigs('create', domain['domain'])
                     statusFinish = 'working'
                 elif host['action'] == 'close':
+                    self.createConfigs('block', domain['domain'])
                     statusFinish = 'closed'
                 elif host['action'] == 'delete':
                     self.removeConfigs(domain['domain'])
@@ -100,24 +104,24 @@ class App:
             conn.close()
 
     # Создание конфигов
-    def createConfigs(self, host):
+    def createAndBlockConfigs(self, mode, host):
         # Создаем папку с логом
         pathToLogs = '{}/logs/{}'.format(self.settings['path_to_files_server'], host)
         if not os.path.isdir(pathToLogs):
             os.makedirs(pathToLogs, 0o755)
 
-        for setting in self.servers.values():
+        for server, template in self.templates[mode].items():
             try:
-                text = open('{}/{}'.format(self.pathToWorkDir, setting['template'])).read()
+                text = open('{}/{}'.format(self.pathToWorkDir, template)).read()
 
                 # Подставляем данные конфигурации в шаблон
                 text = text.replace('$HOSTNAME$', host)
                 text = text.replace('$IP_ADDRESS_SERVER$', self.settings['ip_address_server'])
                 text = text.replace('$PATH_TO_FILES_SERVER$', self.settings['path_to_files_server'])
-                text = text.replace('$VERSION$', self.settings['version'])
+
+                pathToConfig = self.configs[server]
 
                 # Проверяем существует ли путь до конфига
-                pathToConfig = '{}'.format(setting['config'])
                 if not os.path.isdir(pathToConfig):
                     os.makedirs(pathToConfig, 0o755)
                 file = open('{}{}.conf'.format(pathToConfig, host), 'w')
@@ -128,13 +132,18 @@ class App:
 
     # Удаление конфигов
     def removeConfigs(self, host):
-        for setting in self.servers.values():
+        for config in self.configs.values():
             try:
-                os.remove('{}{}.conf'.format(setting['config'], host))
+                os.remove('{}{}.conf'.format(config, host))
             except FileNotFoundError:
                 self.logError(10, host, '{}.conf'.format(host))
             except Exception:
                 self.logError(99, host)
+
+        # Удаляем папку с логом
+        pathToLogs = '{}/logs/{}'.format(self.settings['path_to_files_server'], host)
+        if os.path.isdir(pathToLogs):
+            shutil.rmtree(pathToLogs, ignore_errors=False, onerror=None)
 
     # Обработчик ошибок и запись в лог
     def logError(self, code, domain, data=False):

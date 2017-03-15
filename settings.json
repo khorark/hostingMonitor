@@ -2,8 +2,7 @@
   "settings": {
     "time_update": 20,
     "ip_address_server": "192.168.15.137",
-    "path_to_files_server": "/cloud",
-    "version": "17.02"
+    "path_to_files_server": "/cloud"
   },
   "mysql_config": {
     "host": "localhost",
@@ -11,14 +10,18 @@
     "user": "newuser",
     "password": "1440954"
   },
-  "servers": {
-    "nginx": {
-      "template": "templates/nginx/nginx.template",
-      "config": "conf/nginx/"
+  "configs": {
+    "nginx": "conf/nginx/",
+    "apache": "conf/httpd/"
+  },
+  "templates":{
+    "create": {
+      "nginx":"templates/nginx/nginx.template",
+      "apache":"templates/apache/apache.template"
     },
-    "apache": {
-      "template": "templates/apache/apache.template",
-      "config": "conf/httpd/"
+    "block": {
+      "nginx":"",
+      "apache":""
     }
   }
 }
