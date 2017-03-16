@@ -1,27 +1,40 @@
 {
   "settings": {
-    "time_update": 20,
+    "time_update": 10,
     "ip_address_server": "192.168.15.137",
     "path_to_files_server": "/cloud"
   },
   "mysql_config": {
     "host": "localhost",
-    "database": "test",
-    "user": "newuser",
-    "password": "1440954"
+    "database": "cloud",
+    "user": "python",
+    "password": "99fcd31acea3081d45d0aa9da0665a65"
   },
   "configs": {
-    "nginx": "conf/nginx/",
-    "apache": "conf/httpd/"
+    "nginx": "/cloud/conf/nginx/",
+    "apache": "/cloud/conf/httpd/"
   },
-  "templates":{
-    "create": {
-      "nginx":"templates/nginx/nginx.template",
-      "apache":"templates/apache/apache.template"
+  "actions":{
+    "deleted": {
+      "templates": {
+        "nginx": "",
+        "apache": ""
+      },
+      "status":"deleted"
     },
-    "block": {
-      "nginx":"",
-      "apache":""
+    "create": {
+      "templates": {
+        "nginx": "templates/nginx/created.template",
+        "apache": "templates/apache/created.template"
+      },
+      "status":"working"
+    },
+    "blocked": {
+      "templates": {
+        "nginx": "templates/nginx/blocked.template",
+        "apache": "templates/apache/blocked.template"
+      },
+      "status":"blocked"
     }
   }
 }

@@ -28,7 +28,7 @@ class App:
         self.pathToWorkDir = os.getcwd()
         self.pathSetting = '{}/settings.json'.format(os.getcwd())
         self.settings = ''
-        self.templates = ''
+        self.actions = ''
         self.configs = ''
         self.time_update = ''
         self.mysql_config = ''
@@ -36,11 +36,11 @@ class App:
     def getConfig(self):
         try:
             file = json.load(open(self.pathSetting))
-            self.templates = file['templates']
+            self.actions = file['actions']
             self.settings = file['settings']
             self.mysql_config = file['mysql_config']
             self.configs = file['configs']
-            if not self.templates or not self.settings or not self.mysql_config or not self.configs:
+            if not self.actions or not self.settings or not self.mysql_config or not self.configs:
                 return False
             return True
         except FileNotFoundError:
@@ -62,34 +62,34 @@ class App:
             for host in data:
                 cursor.execute('SELECT domain FROM domains WHERE id = {}'.format(host['domain_id']))
                 domain = cursor.fetchone()
-                statusFinish = ''
-                # Производим физическое действие, в зависимости от action над доменом
-                if host['action'] == 'create':
-                    self.createConfigs('create', domain['domain'])
-                    statusFinish = 'working'
-                elif host['action'] == 'close':
-                    self.createConfigs('block', domain['domain'])
-                    statusFinish = 'closed'
-                elif host['action'] == 'delete':
-                    self.removeConfigs(domain['domain'])
-                    statusFinish = 'deleted'
-                else:
-                    self.logError(60, domain['domain'], host['action'])
 
-                if statusFinish != '':
-                    dateTS = datetime.now()
+                # Производим физическое действие, в зависимости от action над доменом
+                if host['action'] == 'delete':
+                    self.removeConfigs(domain['domain'])
+                else:
+                    self.createOrBlockConfigs(host['action'], domain['domain'])
+
+                date_ts = datetime.now()
+                try:
+                    status_work = self.actions[host['action']]['status']
                     # Обновляем поле update_at и status в таблице domains
                     query = 'UPDATE domains SET status = %s, updated_at = %s WHERE id = %s'
-                    data = (statusFinish, dateTS, host['domain_id'])
+                    data = (status_work, date_ts, host['domain_id'])
                     cursor.execute(query, data)
                     # Обновляем поле update_at и поле completed на 1 в таблице actions
                     query = 'UPDATE actions SET completed = %s, updated_at = %s WHERE id = %s'
-                    data = ('1', dateTS, host['id'])
+                    data = ('1', date_ts, host['id'])
                     cursor.execute(query, data)
                     # Применяем изменения
                     conn.commit()
-                else:
-                    self.logError(70, domain['domain'], host['action'])
+                except KeyError:
+                    # Обновляем поле update_at и поле completed на 2 в таблице actions
+                    query = 'UPDATE actions SET completed = %s, updated_at = %s WHERE id = %s'
+                    data = ('2', date_ts, host['id'])
+                    cursor.execute(query, data)
+                    # Применяем изменения
+                    conn.commit()
+                    self.logError(60, domain['domain'], host['action'])
 
             # Если были изменения, перезагружаем apache и nginx сервера
             if data:
@@ -104,31 +104,37 @@ class App:
             conn.close()
 
     # Создание конфигов
-    def createAndBlockConfigs(self, mode, host):
+    def createOrBlockConfigs(self, mode, host):
         # Создаем папку с логом
         pathToLogs = '{}/logs/{}'.format(self.settings['path_to_files_server'], host)
         if not os.path.isdir(pathToLogs):
             os.makedirs(pathToLogs, 0o755)
 
-        for server, template in self.templates[mode].items():
-            try:
-                text = open('{}/{}'.format(self.pathToWorkDir, template)).read()
+        try:
+            for server, template in self.actions[mode]['templates'].items():
+                try:
+                    text = open('{}/{}'.format(self.pathToWorkDir, template)).read()
 
-                # Подставляем данные конфигурации в шаблон
-                text = text.replace('$HOSTNAME$', host)
-                text = text.replace('$IP_ADDRESS_SERVER$', self.settings['ip_address_server'])
-                text = text.replace('$PATH_TO_FILES_SERVER$', self.settings['path_to_files_server'])
+                    # Подставляем данные конфигурации в шаблон
+                    text = text.replace('$HOSTNAME$', host)
+                    text = text.replace('$IP_ADDRESS_SERVER$', self.settings['ip_address_server'])
+                    text = text.replace('$PATH_TO_FILES_SERVER$', self.settings['path_to_files_server'])
 
-                pathToConfig = self.configs[server]
+                    path_to_config = self.configs[server]
 
-                # Проверяем существует ли путь до конфига
-                if not os.path.isdir(pathToConfig):
-                    os.makedirs(pathToConfig, 0o755)
-                file = open('{}{}.conf'.format(pathToConfig, host), 'w')
-                file.write(text)
-                file.close()
-            except FileNotFoundError:
-                self.logError(10, host, '{}{}.conf'.format(pathToConfig, host))
+                    # Проверяем существует ли путь до конфига
+                    if not os.path.isdir(path_to_config):
+                        os.makedirs(path_to_config, 0o755)
+                    file = open('{}{}.conf'.format(path_to_config, host), 'w')
+                    file.write(text)
+                    file.close()
+                except FileNotFoundError:
+                    self.logError(10, host, '{}{}.conf'.format(path_to_config, host))
+                except Exception:
+                    self.logError(11, host, '{}{}.conf'.format(path_to_config, host))
+
+        except KeyError:
+            self.logError(60, host, mode)
 
     # Удаление конфигов
     def removeConfigs(self, host):
@@ -141,9 +147,9 @@ class App:
                 self.logError(99, host)
 
         # Удаляем папку с логом
-        pathToLogs = '{}/logs/{}'.format(self.settings['path_to_files_server'], host)
-        if os.path.isdir(pathToLogs):
-            shutil.rmtree(pathToLogs, ignore_errors=False, onerror=None)
+        path_to_logs = '{}/logs/{}'.format(self.settings['path_to_files_server'], host)
+        if os.path.isdir(path_to_logs):
+            shutil.rmtree(path_to_logs, ignore_errors=False, onerror=None)
 
     # Обработчик ошибок и запись в лог
     def logError(self, code, domain, data=False):
@@ -165,11 +171,11 @@ class App:
             text = 'Неизвестная ошибка'
 
         # Проверяем, существует ли директория
-        pathDir = '{}/logs/{}'.format(self.pathToWorkDir, domain)
-        if not os.path.isdir(pathDir):
-            os.makedirs(pathDir, 0o0755)
+        path_dir = '{}/logs/{}'.format(self.pathToWorkDir, domain)
+        if not os.path.isdir(path_dir):
+            os.makedirs(path_dir, 0o0755)
 
-        path = '{}/{}.log'.format(pathDir, datetime.now().date())
+        path = '{}/{}.log'.format(path_dir, datetime.now().date())
         file = open(path, 'a')
         file.write("""
             -------------------------
